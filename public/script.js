@@ -1,4 +1,4 @@
-// --- API HELPER ---
+
     async function api(path, opts = {}) {
       const res = await fetch(path, opts);
       if (!res.ok) throw new Error(await res.text());
@@ -13,7 +13,7 @@
         return;
       }
       
-      // Tworzenie tabeli
+      
       let html = '<table><thead><tr>';
       const keys = Object.keys(items[0]);
       keys.forEach(k => html += `<th>${k}</th>`);
@@ -34,10 +34,10 @@
 
     // --- LOGIKA PRZYCISKÓW ---
     
-    // Uniwersalna funkcja do pobierania węzłów danego typu
+    
     async function loadNodesByLabel(label) {
         try {
-            // Pobieramy konkretne pola, żeby tabela była ładna, a nie surowy JSON
+            
             const cypher = `MATCH (n:${label}) RETURN n.name as Name, n.id as ID, labels(n) as Labels ORDER BY n.id`;
             
             const data = await api('/api/query', {
@@ -57,7 +57,7 @@
     document.getElementById('btnEvidence').addEventListener('click', () => loadNodesByLabel('Evidence'));
     document.getElementById('btnScenes').addEventListener('click', () => loadNodesByLabel('CrimeScene'));
 
-    // Własne zapytanie
+    
     document.getElementById('runQuery').addEventListener('click', async () => {
       try {
         const cy = document.getElementById('cypher').value;
@@ -70,9 +70,9 @@
       } catch (e) { document.getElementById('result').textContent = e; }
     });
 
-    // --- WIZUALIZACJA GRAFU (VIS.JS) ---
+    // --- WIZUALIZACJA GRAFU ---
     async function drawGraph() {
-      // Pobieramy etykiety jawnie, aby poprawnie kolorować węzły
+      
       const cypher = `
         MATCH (n)
         OPTIONAL MATCH (n)-[r]->(m)
@@ -94,17 +94,17 @@
             if (!nodeObj) return;
             const id = nodeObj.id || nodeObj.properties?.id;
             
-            // Unikanie duplikatów
+            
             if (!id || nodeMap.has(id)) return;
             nodeMap.set(id, true);
 
-            // Pobieranie etykiet (z extraLabels lub z samego obiektu)
+            
             const rawLabels = extraLabels || nodeObj.labels;
             const labels = Array.isArray(rawLabels) ? rawLabels : (rawLabels ? [rawLabels] : []);
             
             const props = nodeObj.properties || nodeObj;
 
-            // Przypisanie grupy na podstawie etykiety
+            
             let group = "Other";
             if (labels.includes("Witness")) group = "Witness";
             else if (labels.includes("Suspect")) group = "Suspect";
@@ -116,7 +116,7 @@
                 id: id,
                 label: props.name || id,
                 group: group,
-                title: `ID: ${id}\nLabels: ${labels.join(', ')}` // Tooltip
+                title: `ID: ${id}\nLabels: ${labels.join(', ')}` 
             });
         }
 
@@ -129,7 +129,7 @@
             addNode(m, row.m_labels);
 
             if (r && n && m) {
-                // Etykieta krawędzi: rola, notatka, data lub pusta
+                
                 const edgeLabel = r.roleInEvidence || r.note || r.datetime || "";
                 edges.push({
                     from: n.id || n.properties?.id,
@@ -171,7 +171,7 @@
 
         const network = new vis.Network(container, networkData, options);
 
-        // Zoom tylko z CTRL
+        
         container.addEventListener("wheel", (event) => {
             if (!event.ctrlKey) return;
             event.preventDefault();
@@ -200,7 +200,7 @@
         }
 
         try {
-            // Pobieranie największego ID dla danej etykiety
+            
             const idPrefix = {
                 Suspect: "S",
                 Witness: "W",
@@ -223,14 +223,14 @@
 
             let newIdNum = 1;
             if (res.length > 0 && res[0].lastId) {
-                // wyciągamy liczbę z ID np. “S3” -> 3
+                
                 const num = parseInt(res[0].lastId.replace(/\D+/g, ""));
                 newIdNum = num + 1;
             }
 
             const newId = idPrefix + newIdNum;
 
-            // Tworzenie węzła
+            
             const cypherCreate = `
                 CREATE (n:${label} {id: $id, name: $name})
                 RETURN n
@@ -247,10 +247,10 @@
 
             alert(`Dodano: ${label} "${name}" z ID ${newId}`);
 
-            // czyszczenie
+            
             document.getElementById('nodeName').value = "";
 
-            // odświeżenie tabeli i grafu
+            
             loadNodesByLabel(label);
             drawGraph();
 
@@ -265,7 +265,7 @@
       panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
       });
 
-    // Definicja dozwolonych relacji
+    
     const relationRules = {
         "KILLED_AT":      { from: "Victim",   to: "CrimeScene" },
         "WITNESSED":      { from: "Witness",  to: "Suspect" },
@@ -282,7 +282,7 @@
         Evidence:   '#f39c12'
     };
 
-    // GENERATOR LEGENDY
+    
     function renderLegend() {
         const legendContainer = document.getElementById("legendContent");
         legendContainer.innerHTML = "";
@@ -330,7 +330,7 @@
         }
 
         try {
-            // Sprawdzenie, czy od–do pasują etykiety
+            
             const cypherCheck = `
                 MATCH (a {id: $aId}), (b {id: $bId})
                 RETURN labels(a) as aLabels, labels(b) as bLabels
@@ -362,7 +362,7 @@
                 return;
             }
 
-            // Tworzenie relacji
+            
             const cypherCreate = `
                 MATCH (a:${expected.from} {id:$aId}), (b:${expected.to} {id:$bId})
                 MERGE (a)-[r:${type}]->(b)
@@ -380,11 +380,11 @@
 
             alert(`Utworzono relację: ${expected.from}(${fromId}) -[${type}]-> ${expected.to}(${toId})`);
 
-            // czyszczenie pól
+            
             document.getElementById('relFrom').value = "";
             document.getElementById('relTo').value = "";
 
-            // odświeżenie grafu
+            
             drawGraph();
 
         } catch (err) {
@@ -506,10 +506,10 @@
 
             alert(`Updated node ${id}: new name = "${newName}"`);
 
-            // czyszczenie
+            
             document.getElementById('editNodeName').value = "";
 
-            // odświeżenie wyświetlanego typu (na podstawie label)
+            
             const type = result[0].labels[0];
             if (type) loadNodesByLabel(type);
 

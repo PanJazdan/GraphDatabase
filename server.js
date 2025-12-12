@@ -28,7 +28,7 @@ async function runCypher(cypher, params = {}) {
   }
 }
 
-// Główny endpoint obsługujący wszystkie zapytania z frontendu
+
 app.post('/api/query', async (req, res) => {
   const { cypher, params } = req.body;
   if (!cypher) return res.status(400).json({ error: 'Missing cypher' });
@@ -36,29 +36,29 @@ app.post('/api/query', async (req, res) => {
   try {
     const rows = await runCypher(cypher, params);
     
-    // Konwersja intów Neo4j na liczby JS i spłaszczanie właściwości
+    
     const converted = rows.map(r => {
       const obj = {};
       for (const key in r) {
-        // Jeśli to węzeł/relacja z properties
+        
         if (r[key] && r[key].properties) {
-          // Kopiujemy properties
+          
           const props = { ...r[key].properties };
-          // Konwersja Integerów wewnątrz properties
+          
           for (const prop in props) {
             if (props[prop] && typeof props[prop].toNumber === 'function') {
               props[prop] = props[prop].toNumber();
             }
           }
-          // Zwracamy jako obiekt, ale dodajemy też labels jeśli istnieją
+          
           obj[key] = props;
           if (r[key].labels) obj[key + '_labels'] = r[key].labels;
 
         } else if (r[key] && typeof r[key].toNumber === 'function') {
-           // Jeśli to goły Integer
+           
            obj[key] = r[key].toNumber();
         } else {
-           // Zwykłe wartości (string, tablica)
+           
            obj[key] = r[key];
         }
       }
