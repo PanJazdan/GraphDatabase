@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Śledztwo - PoC</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f9f9f9; }
+    h1 { color: #333; }
+    h3 { border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-top: 30px; }
+    
+    /* Stylizacja przycisków */
+    .button-group { margin-bottom: 20px; }
+    button { 
+      padding: 8px 16px; 
+      margin: 4px; 
+      cursor: pointer; 
+      border: none; 
+      border-radius: 4px; 
+      color: white; 
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+
+    /* Kolory przycisków odpowiadające węzłom */
+    #btnSuspects { background-color: #e74c3c; } /* Czerwony */
+    #btnWitnesses { background-color: #5dade2; } /* Niebieski */
+    #btnVictims { background-color: #9b59b6; }   /* Fioletowy */
+    #btnEvidence { background-color: #f39c12; }  /* Pomarańczowy */
+    #btnScenes { background-color: #58d68d; }    /* Zielony */
+    #runQuery { background-color: #34495e; }     /* Ciemny */
+
+    textarea { width: 100%; height: 6em; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; }
+    
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th { background-color: #eee; text-align: left; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+
+    #graph { width: 100%; height: 600px; border: 1px solid #aaa; background: white; }
+  </style>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+
+  <h1>Graph Databse - Investigation</h1>
+
+  <div class="button-group">
+    <button id="btnSuspects">Show Suspects</button>
+    <button id="btnWitnesses">Show Witnesses</button>
+    <button id="btnVictims">Show Victims</button>
+    <button id="btnEvidence">Show Evidence</button>
+    <button id="btnScenes">Show CrimeScenes</button>
+  </div>
+
+  <h3>Table result</h3>
+  <div id="result"><i>Press button above to see results</i></div>
+
+  <h3>Modify database</h3>
+  <div id="addNodePanel" style="display:none; margin-bottom:20px; padding:10px; background:#eef; border-radius:8px;">
+    <label>Type: </label>
+    <select id="nodeLabel">
+      <option value="Suspect">Suspect</option>
+      <option value="Witness">Witness</option>
+      <option value="Victim">Victim</option>
+      <option value="CrimeScene">CrimeScene</option>
+      <option value="Evidence">Evidence</option>
+    </select>
+
+    <label style="margin-left:10px;">Name: </label>
+    <input id="nodeName" type="text" placeholder="np. Paweł Nowak">
+
+    <button id="confirmAddNode" style="background-color:#27ae60;">Add</button>
+  </div>
+
+  <div id="addRelationPanel" style="display:none; margin-bottom:20px; padding:10px; background:#efe; border-radius:8px;">
+    <label>Relation type:</label>
+    <select id="relationType">
+      <option value="KILLED_AT">Victim → KILLED_AT → CrimeScene</option>
+      <option value="WITNESSED">Witness → WITNESSED → Suspect</option>
+      <option value="WAS_AT">Witness → WAS_AT → CrimeScene</option>
+      <option value="FOUND_AT">Evidence → FOUND_AT → CrimeScene</option>
+      <option value="EVIDENCE_OF">Evidence → EVIDENCE_OF → Suspect</option>
+    </select>
+
+    <div style="margin-top:10px;">
+      <label>Source ID:</label>
+      <input id="relFrom" type="text" placeholder="np. V1 / W2 / E3">
+
+      <label style="margin-left:10px;">Target ID:</label>
+      <input id="relTo" type="text" placeholder="np. C1 / S3">
+    </div>
+
+    <button id="confirmAddRelation" style="background-color:#6c3483; margin-top:10px;">Create relation</button>
+  </div>
+
+  <div id="deleteNodePanel"
+      style="display:none; margin-bottom:20px; padding:10px; background:#fdecea; border-radius:8px;">
+    <label>Node ID:</label>
+    <input id="deleteNodeId" type="text" placeholder="np. S1 / C2 / V3">
+
+    <button id="confirmDeleteNode" style="background-color:#922b21;">Delete</button>
+  </div>
+
+  <div id="deleteRelationPanel"
+      style="display:none; margin-bottom:20px; padding:10px; background:#fcf3cf; border-radius:8px;">
+    
+    <label>Relation type:</label>
+    <select id="deleteRelationType">
+        <option value="KILLED_AT">KILLED_AT</option>
+        <option value="WITNESSED">WITNESSED</option>
+        <option value="WAS_AT">WAS_AT</option>
+        <option value="FOUND_AT">FOUND_AT</option>
+        <option value="EVIDENCE_OF">EVIDENCE_OF</option>
+    </select>
+
+    <div style="margin-top:10px;">
+      <label>Source ID:</label>
+      <input id="delRelFrom" type="text" placeholder="np. V1 / W2 / E3">
+
+      <label style="margin-left:10px;">Target ID:</label>
+      <input id="delRelTo" type="text" placeholder="np. C1 / S3">
+    </div>
+
+    <button id="confirmDeleteRelation" style="background-color:#b9770e; margin-top:10px;">
+      Delete relation
+    </button>
+  </div>
+
+  <div id="editNodePanel" style="display:none; margin-bottom:20px; padding:10px; background:#ffe; border-radius:8px;">
+      <label>ID: </label>
+      <input id="editNodeId" type="text" placeholder="np. S1 / V2 / E3">
+
+      <label style="margin-left:10px;">New name: </label>
+      <input id="editNodeName" type="text" placeholder="Nowa nazwa">
+
+      <button id="confirmEditNode" style="background-color:#d35400; margin-left:10px;">Apply</button>
+  </div>
+
+
+  
+
+  <div class="button-group">
+    <button id="addNodeBtn" style="background-color:#42ff91;">Add node</button>
+    <button id="addRelationBtn" style="background-color:#8e44ad;">Add relation</button>
+    <button id="editNodeBtn" style="background-color:#33eeff;">Edit node</button>
+    <button id="deleteNodeBtn" style="background-color:#ff1b02;">Delete node</button>
+    <button id="deleteRelationBtn" style="background-color:#601500;">Delete relation</button>
+  </div>
+
+  <h3>Grpah visualization</h3>
+  <div id="graphWrapper" style="position:relative; width:100%; height:600px;">
+    <div id="graph" style="width:100%; height:100%;"></div>
+
+    <div id="graphLegend"
+        style="
+            position:absolute;
+            top:10px;
+            right:10px;
+            background:rgba(255,255,255,0.85);
+            padding:10px 15px;
+            border-radius:10px;
+            box-shadow:0 0 8px rgba(0,0,0,0.15);
+            font-size:13px;
+            z-index:10;
+        ">
+        <b>Legend</b><br>
+        <div id="legendContent"></div>
+        <b>Zoom - Ctrl + mouseScroll</b>
+    </div>
+</div>
+
+  <h3>Execute custom query</h3>
+  <textarea id="cypher">MATCH (n) RETURN n LIMIT 25;</textarea>
+  <button id="runQuery">Execute query</button>
+  <script src="script.js"></script>
+</body>
+</html>
